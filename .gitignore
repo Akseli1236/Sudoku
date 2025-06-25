@@ -1,1 +1,21 @@
 *~
+# Ignore all executable files (basic pattern)
+*.exe     # Windows executables
+*.out     # Common C/C++ output
+*.elf     # Embedded/Linux binaries
+*.bin     # Raw binaries
+*.dll     # Windows libraries
+*.so      # Linux shared objects
+*.dylib   # macOS dynamic libraries
+sudoku
+# Ignore any file with no extension that is executable (UNIX-like systems)
+# You can't match "executable" flag directly in .gitignore, but you can ignore specific files
+my_program     # If you know the name of your binary
+build/         # Ignore the whole build directory (recommended)
+
+# General build folders
+/build/
+/bin/
+/obj/
+/dist/
+
