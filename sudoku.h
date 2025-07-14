@@ -1,19 +1,20 @@
 // sudoku.h
 
-#ifndef SUDOKU_H       // include guard start
+#ifndef SUDOKU_H // include guard start
 #define SUDOKU_H
 
 #include <vector>
 
 class Sudoku {
 public:
-  Sudoku();           // constructor declaration
+  Sudoku(); // constructor declaration
   void startSudoku(int, int);
-  void drawBoard();  // method declaration
+  void drawBoard(); // method declaration
   bool generateBoard();
   void startFilling();
   void updateBoard(std::vector<std::vector<int>>, bool);
   void checkSolution();
+
 private:
   std::vector<std::vector<int>> board_;
   std::vector<std::vector<int>> playersBoard_;
