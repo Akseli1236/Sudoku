@@ -1,11 +1,11 @@
 #include "sudoku.h"
+#include <ios>
 #include <iostream>
 #include <limits>
-#include <ios>
 
-int validInput(){
+int validInput() {
   int value;
-  while (!(std::cin >> value)){
+  while (!(std::cin >> value)) {
     std::cout << "Not a number" << std::endl;
     std::cin.clear();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -13,14 +13,13 @@ int validInput(){
   return value;
 }
 
-
-int main(){
+int main() {
   Sudoku game;
-  std::cout << "Choose size (default 3): ";
-  int size = validInput();
+  std::cout << "Choose size (max: 4): ";
+  int input = validInput();
+  int size = (input < 5) ? input : 4;
   std::cout << "Choose difficulty (2-size): ";
   int difficulty = validInput();
   game.startSudoku(size, difficulty);
   return 0;
 }
-
