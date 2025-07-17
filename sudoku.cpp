@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <ostream>
 #include <string>
 #include <time.h>
 #include <vector>
@@ -15,53 +16,78 @@ void Sudoku::startSudoku(int size, int difficulty) {
   power_ = pow(size, 2);
   size_ = size;
   difficulty_ = difficulty;
+  tempBoard_.resize(power_, vector<int>(power_, 0));
+  FULL = (1 << power_) - 1;
   drawBoard();
   startFilling();
 }
 
 void Sudoku::drawBoard() {
-  playersBoard_.resize(power_);
+  playersBoard_.resize(power_, vector<int>(power_, 0));
   srand(time(0));
-  while (!generateBoard()) {
-  }
-  updateBoard(board_, true);
+  generateBoard(playersBoard_);
+  board_ = playersBoard_;
+  updateBoard(playersBoard_, true);
 }
 
-bool Sudoku::generateBoard() {
-  vector<vector<int>> boxes(power_);
-  vector<vector<int>> rows(power_);
-  vector<vector<int>> columns(power_);
+bool Sudoku::solve(vector<vector<int>> &board, vector<uint16_t> &rowMask,
+                   vector<uint16_t> &colMask, vector<uint16_t> &boxMask,
+                   int r = 0, int c = 0) {
 
-  for (int row = 0; row < power_; row++) {
-    for (int column = 0; column < power_; column++) {
-      int randNum;
-      vector<int> tested;
+  if (r == power_) {
+    return true;
+  }
+  if (c == power_)
+    return solve(board, rowMask, colMask, boxMask, r + 1, 0);
+  if (board[r][c] != 0)
+    return solve(board, rowMask, colMask, boxMask, r, c + 1);
 
-      do {
-        randNum = (rand() % power_) + 11;
-        if (count(tested.begin(), tested.end(), randNum) == 0) {
-          tested.push_back(randNum);
-        }
+  int boxIndex = (r / size_) * size_ + (c / size_);
+  uint16_t used = rowMask[r] | colMask[c] | boxMask[boxIndex];
+  uint16_t available = ~used & FULL;
 
-        if (tested.size() >= power_) {
-          return false;
-        }
+  for (int num = 21; num <= power_ + 20; ++num) {
+    if (num == dontTry_ && dontTry_ != -1) {
+      dontTry_ = -1;
+      continue;
+    }
+    uint16_t mask = 1 << (num - 21);
 
-      } while (
-          (count(rows.at(row).begin(), rows.at(row).end(), randNum) +
-           count(columns.at(column).begin(), columns.at(column).end(),
-                 randNum) +
-           count(boxes.at((row / size_) * size_ + (column / size_)).begin(),
-                 boxes.at((row / size_) * size_ + (column / size_)).end(),
-                 randNum)) > 0);
+    if (available & mask) {
 
-      boxes.at((row / size_) * size_ + (column / size_)).push_back(randNum);
-      rows.at(row).push_back(randNum);
-      columns.at(column).push_back(randNum);
+      board[r][c] = num;
+      rowMask[r] |= mask;
+      colMask[c] |= mask;
+      boxMask[boxIndex] |= mask;
+
+      if (solve(board, rowMask, colMask, boxMask, r, c + 1))
+        return true;
+
+      // We do da backtrack
+      board[r][c] = 0;
+      rowMask[r] ^= mask;
+      colMask[c] ^= mask;
+      boxMask[boxIndex] ^= mask;
     }
   }
-  board_ = rows;
-  return true;
+
+  return false;
+}
+
+bool Sudoku::generateBoard(vector<vector<int>> &board) {
+  vector<uint16_t> rowMask(power_, 0), colMask(power_, 0), boxMask(power_, 0);
+
+  for (int r = 0; r < power_; ++r)
+    for (int c = 0; c < power_; ++c)
+      if (tempBoard_[r][c] != 0) {
+        int val = tempBoard_[r][c];
+        uint16_t mask = 1 << (val - 21);
+        rowMask[r] |= mask;
+        colMask[c] |= mask;
+        boxMask[(r / size_) * size_ + (c / size_)] |= mask;
+      }
+
+  return solve(board, rowMask, colMask, boxMask);
 }
 
 void Sudoku::updateBoard(vector<vector<int>> board, bool init) {
@@ -69,7 +95,7 @@ void Sudoku::updateBoard(vector<vector<int>> board, bool init) {
   int rowCounter = 0;
 
   string topAndBottomLine = string(power_ * 3 + (size_ + 1), '-');
-
+  string finalPrint;
   for (auto i : board) {
     string print;
     for (auto y : i) {
@@ -77,16 +103,25 @@ void Sudoku::updateBoard(vector<vector<int>> board, bool init) {
         print += "|";
       }
 
-      string number = to_string(y % 10);
+      string number = to_string(y % 20);
 
       if (init) {
         if (rand() % difficulty_ == 0) {
+
           print += " \033[36m" + number + "\033[0m ";
-          playersBoard_.at(rowCounter).push_back(y);
         } else {
-          tilesToFill_++;
-          playersBoard_.at(rowCounter).push_back(0);
-          print += string(3, ' ');
+
+          tempBoard_ = playersBoard_;
+          tempBoard_.at(rowCounter).at(counter % power_) = 0;
+          dontTry_ = y;
+
+          if (generateBoard(tempBoard_)) {
+            print += " \033[36m" + number + "\033[0m ";
+          } else {
+            playersBoard_.at(rowCounter).at(counter % power_) = 0;
+            tilesToFill_++;
+            print += string(3, ' ');
+          }
         }
       } else {
         if (y == 0) {
@@ -103,11 +138,11 @@ void Sudoku::updateBoard(vector<vector<int>> board, bool init) {
     rowCounter++;
 
     if ((counter - power_) % (power_ * size_) == 0) {
-      cout << topAndBottomLine << endl;
+      finalPrint += topAndBottomLine + "\n";
     }
-    cout << print << "|" << endl;
+    finalPrint += print + "|\n";
   }
-  cout << topAndBottomLine << endl;
+  cout << finalPrint << topAndBottomLine << endl;
 }
 
 void Sudoku::checkSolution() {
@@ -123,6 +158,7 @@ void Sudoku::checkSolution() {
     cout << "Correct Solution!" << endl;
   } else {
     cout << "Incorrect Solution!" << endl;
+    updateBoard(board_, false);
   }
 }
 
